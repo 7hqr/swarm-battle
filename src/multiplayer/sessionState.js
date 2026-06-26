@@ -1,4 +1,7 @@
-const DEFAULT_SIGNALING_URL = "ws://localhost:3012";
+const DEFAULT_SIGNALING_URL =
+  window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+    ? "ws://localhost:3012"
+    : `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}/ws`;
 
 export function createMultiplayerSessionState() {
   return {
