@@ -1,0 +1,12 @@
+{
+  "name": "swarmbattle",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node ./server/devServer.js",
+    "signal": "node ./server/signalingServer.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}

@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SwarmBattle Prototype</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <div class="gameplay-stage">
+      <canvas id="battlefield"></canvas>
+
+      <div class="hud hud-top-left">
+        <section class="panel panel-match">
+          <h2 id="match-panel-title">Status</h2>
+          <div id="match-status"></div>
+        </section>
+        <div id="research-launcher"></div>
+      </div>
+
+      <div class="hud hud-top-center">
+        <section class="panel panel-territory">
+          <div class="panel-title-row">
+            <h2>Territory Control</h2>
+            <div id="match-time"></div>
+          </div>
+          <div id="territory-status"></div>
+        </section>
+      </div>
+
+      <div class="hud hud-top-right">
+        <section class="panel panel-score">
+          <h2 id="score-panel-title">Score</h2>
+          <div id="score-panel"></div>
+        </section>
+      </div>
+
+      <div class="hud hud-debug">
+        <section class="panel panel-debug">
+          <h2>Performance</h2>
+          <div id="performance-panel"></div>
+        </section>
+      </div>
+
+      <div class="hud hud-overlay">
+        <div id="menu-overlay"></div>
+      </div>
+    </div>
+
+    <div class="hud hud-bottom">
+      <section class="panel panel-command">
+        <div class="command-layout">
+          <section class="command-column command-column-selection">
+            <h2>Selection</h2>
+            <div id="bottom-selection"></div>
+          </section>
+          <section class="command-column command-column-context">
+            <h2>Commands</h2>
+            <div id="bottom-context"></div>
+          </section>
+          <section class="command-column command-column-minimap">
+            <h2>Minimap</h2>
+            <div class="minimap-frame">
+              <canvas id="minimap"></canvas>
+            </div>
+          </section>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>
