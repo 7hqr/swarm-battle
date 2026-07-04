@@ -16,7 +16,6 @@ import {
 } from "../rules/catalogRules.js";
 import {
   getOwnedBuildings,
-  getPlayerById,
   isPlayerOwnedEntity
 } from "../state/entities.js";
 import {
@@ -109,22 +108,21 @@ function renderSingleSelectionSummary(state, selected) {
       <div class="stack">
         <div><span class="badge">Unit</span> ${unitDefinition.displayName}</div>
         <div class="meta">Health: ${Math.ceil(getEntityDisplayValue(state, selected, "health", selected.health))} / ${selected.maxHealth}</div>
-        <div class="meta">State: ${selected.state}</div>
-        <div class="meta">Owner: ${getPlayerById(state, selected.ownerId)?.name ?? "Unknown"}</div>
       </div>
     `;
   }
 
   const buildingDefinition = state.catalog.buildings[selected.definitionId];
-  const owner = getPlayerById(state, selected.ownerId);
   const localPlayerId = getLocalPlayerId(state);
   const playerOwned = localPlayerId ? isPlayerOwnedEntity(state, selected.id, localPlayerId) : false;
   const details = [
     `<div><span class="badge">Building</span> ${buildingDefinition.displayName}</div>`,
-    `<div class="meta">Health: ${Math.ceil(getEntityDisplayValue(state, selected, "health", selected.health))} / ${selected.maxHealth}</div>`,
-    `<div class="meta">Owner: ${owner?.name ?? "Unknown"}</div>`,
-    `<div class="meta">${selected.isConstructed ? "Construction complete" : "Under construction"}</div>`
+    `<div class="meta">Health: ${Math.ceil(getEntityDisplayValue(state, selected, "health", selected.health))} / ${selected.maxHealth}</div>`
   ];
+
+  if (!selected.isConstructed) {
+    details.push(`<div class="meta">Under construction</div>`);
+  }
 
   if (isProductionKind(buildingDefinition.kind)) {
     const producedUnitId = getProducedUnitId(buildingDefinition);
@@ -139,17 +137,10 @@ function renderSingleSelectionSummary(state, selected) {
     const player = getLocalPlayer(state);
     const currentTier = state.catalog.baseTiers[player.baseTier];
     details.push(`<div class="meta">Base tier: ${currentTier.displayName}</div>`);
-    details.push(`<div class="meta">Tech Center level: ${state.catalog.techTiers[player.techTier].displayName}</div>`);
-    details.push(`<div class="meta">Right click to set movement path. Shift+right click appends.</div>`);
   }
 
   if (buildingDefinition.supportsResearch && playerOwned && selected.isConstructed) {
-    const player = getLocalPlayer(state);
-    details.push(`<div class="meta">Tech Center level: ${state.catalog.techTiers[player.techTier].displayName}</div>`);
-    const researchLabel = player.activeResearch
-      ? state.catalog.tech[player.activeResearch.techId].displayName
-      : "None";
-    details.push(`<div class="meta">Active research: ${researchLabel}</div>`);
+    details.push(`<div class="meta">Research hub online</div>`);
   }
 
   return `<div class="stack">${details.join("")}</div>`;
@@ -483,14 +474,13 @@ function renderSingleSelectionCommands(state, selected, controlsDisabled) {
           return `<div class="meta">Upgrading to ${tier.displayName}: ${(progress * 100).toFixed(0)}%</div>`;
         })()
       : nextTier
-        ? `<button type="button" data-action="start-tech-upgrade" ${controlsDisabled || !canUpgradeTech(state, getLocalPlayerId(state)) ? "disabled" : ""}>Upgrade to ${nextTier.displayName} (${nextTier.cost})</button>`
+        ? renderTechUpgradeButton(state, nextTier, controlsDisabled)
         : `<div class="meta">Maximum Tech Center tier reached.</div>`;
 
     return `
       <div class="stack">
         <div class="meta">Current level: ${currentTier.displayName}</div>
         ${activeUpgrade}
-        <button type="button" data-action="open-research-modal" ${controlsDisabled ? "disabled" : ""}>Research</button>
       </div>
     `;
   }
@@ -597,6 +587,19 @@ function renderBaseUpgradeButton(state, currentTier, nextTier, controlsDisabled)
   `;
 }
 
+function renderTechUpgradeButton(state, nextTier, controlsDisabled) {
+  const localPlayerId = getLocalPlayerId(state);
+  const disabled = controlsDisabled || !canUpgradeTech(state, localPlayerId);
+
+  return `
+    <button type="button" data-action="start-tech-upgrade" class="command-card command-card-upgrade" ${disabled ? "disabled" : ""}>
+      <span class="command-card-title">Upgrade to ${nextTier.displayName}</span>
+      <span class="command-card-meta">${nextTier.cost} resources | ${nextTier.upgradeTime}s</span>
+      <span class="command-card-meta">Unlock deeper research rows and later tech progression.</span>
+    </button>
+  `;
+}
+
 function formatBaseUpgradeDeltas(currentTier, nextTier) {
   const currentStats = currentTier.baseStats;
   const nextStats = nextTier.baseStats;
@@ -605,8 +608,7 @@ function formatBaseUpgradeDeltas(currentTier, nextTier) {
     `Regen +${nextStats.healthRegenPerSecond - currentStats.healthRegenPerSecond}/s`,
     `Move +${nextStats.moveSpeed - currentStats.moveSpeed}`,
     `Range +${nextStats.defense.attackRange - currentStats.defense.attackRange}`,
-    `Damage +${nextStats.defense.attackDamage - currentStats.defense.attackDamage}`,
-    `Atk CD ${(nextStats.defense.attackCooldown - currentStats.defense.attackCooldown).toFixed(2)}s`
+    `Damage +${nextStats.defense.attackDamage - currentStats.defense.attackDamage}`
   ];
 
   return deltas.join(" | ");
