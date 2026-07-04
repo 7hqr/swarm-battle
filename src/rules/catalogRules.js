@@ -1,15 +1,41 @@
 import { getOwnedBuildings, getPlayerById } from "../state/entities.js";
 import { getPlayerMoveSpeedMultiplier } from "../systems/mapObjectives.js";
 
+export function getConstructedTechCenterLevel(state, playerId) {
+  const player = getPlayerById(state, playerId);
+  if (!player) {
+    return 0;
+  }
+
+  const hasConstructedTechCenter = getOwnedBuildings(state, playerId, "tech_structure").some(
+    (building) => building.isConstructed
+  );
+
+  return hasConstructedTechCenter ? player.techTier : 0;
+}
+
+export function getResearchRequiredTechCenterLevel(techDefinition) {
+  const row = techDefinition?.layout?.row;
+  if (!Number.isInteger(row) || row < 0) {
+    throw new Error(`Tech ${techDefinition?.id ?? "unknown"} must define a non-negative integer layout.row.`);
+  }
+
+  return row + 1;
+}
+
 export function getBuildingCost(state, playerId, buildingId) {
   const definition = state.catalog.buildings[buildingId];
   if (!definition) {
     throw new Error(`Unknown building definition: ${buildingId}`);
   }
 
-  const ownedCount = getOwnedBuildings(state, playerId).filter((entity) => entity.definitionId === buildingId).length;
+  const ownedCount = getOwnedBuildingCount(state, playerId, buildingId);
 
   return definition.cost + definition.costIncreasePerOwned * ownedCount;
+}
+
+export function getOwnedBuildingCount(state, playerId, buildingId) {
+  return getOwnedBuildings(state, playerId).filter((entity) => entity.definitionId === buildingId).length;
 }
 
 export function isProductionKind(kind) {
@@ -32,13 +58,61 @@ export function getProducedUnitId(buildingDefinition) {
   return buildingDefinition.producedUnitIds[0];
 }
 
+export function getProductionBatchSize(buildingDefinition) {
+  if (!isProductionKind(buildingDefinition.kind)) {
+    return 0;
+  }
+
+  return buildingDefinition.productionBatchSize ?? 1;
+}
+
+export function getProductionCycleTime(buildingDefinition, unitDefinition) {
+  if (!isProductionKind(buildingDefinition.kind)) {
+    return 0;
+  }
+
+  return buildingDefinition.productionCycleTime ?? unitDefinition.buildTime;
+}
+
 export function isTechUnlocked(state, playerId, techId) {
   return getPlayerById(state, playerId).researchedTechIds.includes(techId);
 }
 
-export function isBuildingUnlocked(state, playerId, buildingId) {
+export function getBuildingAvailability(state, playerId, buildingId) {
   const definition = state.catalog.buildings[buildingId];
-  return getPlayerById(state, playerId).techTier >= definition.requiredTechTier;
+  if (!definition) {
+    throw new Error(`Unknown building definition: ${buildingId}`);
+  }
+
+  if (getConstructedTechCenterLevel(state, playerId) < definition.requiredTechCenterLevel) {
+    return {
+      unlocked: false,
+      reason: definition.requiredTechCenterLevel <= 0
+        ? "Unavailable"
+        : `Needs Tech Center Lv. ${definition.requiredTechCenterLevel}`
+    };
+  }
+
+  if (Number.isInteger(definition.maxOwned) && definition.maxOwned >= 0) {
+    const ownedCount = getOwnedBuildingCount(state, playerId, buildingId);
+    if (ownedCount >= definition.maxOwned) {
+      return {
+        unlocked: false,
+        reason: definition.maxOwned === 1
+          ? "Limit reached"
+          : `Limit ${definition.maxOwned}`
+      };
+    }
+  }
+
+  return {
+    unlocked: true,
+    reason: "Available"
+  };
+}
+
+export function isBuildingUnlocked(state, playerId, buildingId) {
+  return getBuildingAvailability(state, playerId, buildingId).unlocked;
 }
 
 export function isProductionKindUnlocked(state, playerId, kind) {
@@ -49,7 +123,7 @@ export function isProductionKindUnlocked(state, playerId, kind) {
 
 export function isUnitUnlocked(state, playerId, unitId) {
   const definition = state.catalog.units[unitId];
-  return getPlayerById(state, playerId).techTier >= definition.requiredTechTier;
+  return getConstructedTechCenterLevel(state, playerId) >= definition.requiredTechCenterLevel;
 }
 
 export function getResearchCost(state, playerId, techId) {

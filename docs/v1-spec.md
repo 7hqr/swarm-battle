@@ -228,7 +228,7 @@ V1 uses one mirror-match roster only.
 - Anti-swarm unit
 - Anti-tank unit
 
-Only the basic unit should be available by default. The rest should come online through main base tier upgrades and production progression.
+Only the basic unit should be available by default. The rest should come online through Tech Center construction, Tech Center levels, and production progression.
 
 ### Roster Constraints
 
@@ -339,7 +339,7 @@ High-level role targets:
 ### Starting Unlock State
 
 - The only unit available at match start is the basic unit.
-- Every other unit should be gated behind main base tiers, even if its production building already exists or is affordable.
+- Every other unit should be gated behind Tech Center access, even if its production building already exists or is affordable.
 
 ## Information Model
 
@@ -369,20 +369,22 @@ The Tech Center should own unit, building, and research unlock progression. Main
 
 Base tiers and Tech Center upgrades should support macro strategy rather than replace it.
 
-- Tech Center tier timing should unlock new pressure patterns, counters, and timing attacks.
+- Tech Center timing and level-ups should unlock new pressure patterns, counters, and timing attacks.
 - Tech Center choices should improve already-unlocked units through branching research nodes.
 - A player should be able to pivot in response to an opponent's strategy, but delayed pivots should carry real map-control consequences.
 - Upgrade timing should not become a deterministic build-order race with one correct opener.
-- Expansion timing, unit ratios, Tech Center tier timing, base stat timing, and research priorities should remain similarly important strategic dimensions.
+- Expansion timing, unit ratios, Tech Center timing, Tech Center level timing, base stat timing, and research priorities should remain similarly important strategic dimensions.
 
 ### V1 Progression Scope
 
 V1 progression scope is focused:
 
 - Main base upgrades improve the main base's own durability and combat stats.
+- The main base weapon is a center-mounted turret with limited turn rate and post-shot unit-priority retargeting, with separate tuning for proximity pressure, current-target stickiness, and structure deprioritization.
 - Tech Center tiers unlock new units, buildings, and research branches.
 - Tech Center research contains branching non-repeatable upgrades for unlocked units.
-- Each unlocked unit owns its own branch column rather than sharing a broad mixed-role branch.
+- Each player may own only one Tech Center.
+  - Each unlocked unit owns its own branch column rather than sharing a broad mixed-role branch.
 - Branches should read as baseline upgrades, then specialization forks, then branch-local follow-up nodes.
 - Mutual exclusivity should live inside a unit branch to force specialization choices without creating cross-branch dependency webs.
 
@@ -395,18 +397,18 @@ Layer 1: early foundation
 - Basic stat improvements
 - No new unit unlocks
 
-Tier 2: production escalation
+Tech Center Level 1: production escalation
 
 - Unlock disposable swarm and ranged damage from core production
-- Reveal Tech Center upgrades for those units
+- Reveal the first row of their research, with deeper rows gated by later Tech Center levels
 
-Tier 3: specialist access
+Tech Center Level 2: specialist access
 
 - Unlock advanced production and the three advanced units
 
-Tech Center specialist scaling
+Tech Center Levels 3 and 4: specialist scaling
 
-- Branch-local non-repeatable specialization choices for advanced and already-unlocked units
+- Each row deeper in a branch requires one more Tech Center level
 
 This structure should support a clear early-to-midgame arc:
 
@@ -521,9 +523,10 @@ V1 does not need advanced front-control tools beyond waypoints.
 
 Tech Center tiers should own unlock progression, while the Tech Center research tree should own branching unit-stat and production-scaling choices.
 
-- Tier 1 starts with the main base, a Tech Center, basic production, and the basic unit.
-- Tech Center Tier 2 unlocks core-production specialist units and their research.
-- Tech Center Tier 3 unlocks advanced production, advanced units, and their research.
+- The main base and basic production start available without a Tech Center.
+- Building a Tech Center unlocks swarm and ranged production plus the first research row.
+- Tech Center Level 2 unlocks advanced production and advanced units.
+- Each research row below the first requires one more Tech Center level.
 - Main base upgrades are parallel economic and survivability investments rather than the tech gate.
 - Tech Center branches should never depend on other branches.
 - A branch should usually read baseline -> baseline -> specialization fork -> follow-up.

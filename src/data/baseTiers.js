@@ -18,7 +18,17 @@ export const baseTierDefinitions = [
       defense: {
         attackRange: 320,
         attackDamage: 18,
-        attackCooldown: 1.15
+        attackCooldown: 1.15,
+        turretTurnRateRadians: 2.25,
+        targetDistanceWeight: 98,
+        targetDistancePower: 1.35,
+        targetUnitPriorityBonus: 22,
+        targetCurrentTargetBonus: 11,
+        targetStructurePenalty: 10,
+        targetMainBasePenalty: 16,
+        targetCloseThreatRadius: 150,
+        targetCloseThreatBonus: 38,
+        targetCloseThreatPower: 1.2
       }
     }
   },
@@ -41,7 +51,17 @@ export const baseTierDefinitions = [
       defense: {
         attackRange: 430,
         attackDamage: 28,
-        attackCooldown: 0.92
+        attackCooldown: 0.92,
+        turretTurnRateRadians: 2.5,
+        targetDistanceWeight: 104,
+        targetDistancePower: 1.38,
+        targetUnitPriorityBonus: 24,
+        targetCurrentTargetBonus: 12,
+        targetStructurePenalty: 10,
+        targetMainBasePenalty: 16,
+        targetCloseThreatRadius: 165,
+        targetCloseThreatBonus: 42,
+        targetCloseThreatPower: 1.24
       }
     }
   },
@@ -64,7 +84,17 @@ export const baseTierDefinitions = [
       defense: {
         attackRange: 540,
         attackDamage: 42,
-        attackCooldown: 0.72
+        attackCooldown: 0.72,
+        turretTurnRateRadians: 2.8,
+        targetDistanceWeight: 110,
+        targetDistancePower: 1.4,
+        targetUnitPriorityBonus: 26,
+        targetCurrentTargetBonus: 13,
+        targetStructurePenalty: 11,
+        targetMainBasePenalty: 18,
+        targetCloseThreatRadius: 180,
+        targetCloseThreatBonus: 46,
+        targetCloseThreatPower: 1.28
       }
     }
   }

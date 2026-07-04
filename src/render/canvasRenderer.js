@@ -3,11 +3,16 @@ import { getViewportFocusPoint, getVisibleWorldBounds } from "../state/camera.js
 import { getLocalPlayerId } from "../state/localPlayer.js";
 import {
   getEntityDisplayAngle,
+  getEntityDisplayAngleForField,
   getEntityDisplayPoint,
   getEntityDisplayValue,
   getPlayerDisplayValue
 } from "../multiplayer/interpolation.js";
-import { getProducedUnitId, isProductionKind } from "../rules/catalogRules.js";
+import {
+  getProducedUnitId,
+  getProductionCycleTime,
+  isProductionKind
+} from "../rules/catalogRules.js";
 import { getSelectedEntities } from "../state/selection.js";
 import { getControlStructureObjectives } from "../systems/mapObjectives.js";
 import {
@@ -469,6 +474,10 @@ function drawBuildings(context, state, visibleBounds) {
       context.stroke();
     }
 
+    if (buildingDefinition.kind === "base" && entity.isConstructed) {
+      drawBaseTurret(context, state, entity, displayPoint, nowMs);
+    }
+
     context.fillStyle = "#f3f6e9";
     context.font = "12px Segoe UI";
     context.textAlign = "center";
@@ -501,6 +510,7 @@ function drawBuildings(context, state, visibleBounds) {
     const producedUnitId = getProducedUnitId(buildingDefinition);
     if (producedUnitId && entity.productionProgressSeconds > 0) {
       const unitDefinition = state.catalog.units[producedUnitId];
+      const productionCycleTime = getProductionCycleTime(buildingDefinition, unitDefinition);
       const displayProductionProgress = getEntityDisplayValue(
         state,
         entity,
@@ -508,7 +518,7 @@ function drawBuildings(context, state, visibleBounds) {
         entity.productionProgressSeconds,
         nowMs
       );
-      const progress = displayProductionProgress / unitDefinition.buildTime;
+      const progress = displayProductionProgress / productionCycleTime;
       if (showMinimalBars) {
         drawUnitProgressBar(
           context,
@@ -568,28 +578,6 @@ function drawBuildings(context, state, visibleBounds) {
         }
         continue;
       }
-
-      const research = player.activeResearch;
-      if (research) {
-        const techDefinition = state.catalog.tech[research.techId];
-        const displayProgressSeconds = getPlayerDisplayValue(
-          state,
-          player,
-          "activeResearchProgressSeconds",
-          research.progressSeconds,
-          nowMs
-        );
-        const progress = displayProgressSeconds / techDefinition.researchTime;
-        if (showMinimalBars) {
-          drawUnitProgressBar(
-            context,
-            displayPoint.x,
-            displayPoint.y + entity.radius + 12,
-            Math.max(22, entity.radius * 2.25),
-            progress
-          );
-        }
-      }
     }
   }
 }
@@ -638,6 +626,42 @@ function drawUnits(context, state, visibleBounds) {
       drawUnitHealthBar(context, displayPoint.x, displayPoint.y - entity.radius - 7, Math.max(14, entity.radius * 2.1), healthRatio);
     }
   }
+}
+
+function drawBaseTurret(context, state, entity, displayPoint, nowMs) {
+  const turretAngle = getEntityDisplayAngleForField(
+    state,
+    entity,
+    "turretFacingAngle",
+    entity.turretFacingAngle ?? entity.facingAngle ?? 0,
+    nowMs
+  );
+  const mountRadius = Math.max(7, entity.radius * 0.34);
+  const barrelLength = Math.max(12, entity.radius * 0.68);
+  const barrelWidth = Math.max(5, entity.radius * 0.18);
+  const barrelEndX = displayPoint.x + Math.cos(turretAngle) * barrelLength;
+  const barrelEndY = displayPoint.y + Math.sin(turretAngle) * barrelLength;
+
+  context.save();
+  context.strokeStyle = "#f6e9b9";
+  context.lineWidth = barrelWidth;
+  context.lineCap = "round";
+  context.beginPath();
+  context.moveTo(displayPoint.x, displayPoint.y);
+  context.lineTo(barrelEndX, barrelEndY);
+  context.stroke();
+
+  context.fillStyle = "#1d2732";
+  context.beginPath();
+  context.arc(displayPoint.x, displayPoint.y, mountRadius, 0, Math.PI * 2);
+  context.fill();
+
+  context.strokeStyle = "#f3f6e9";
+  context.lineWidth = 2;
+  context.beginPath();
+  context.arc(displayPoint.x, displayPoint.y, mountRadius, 0, Math.PI * 2);
+  context.stroke();
+  context.restore();
 }
 
 function drawProjectiles(context, state, visibleBounds) {

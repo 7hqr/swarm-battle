@@ -24,7 +24,7 @@ import {
   markTerritoryInfluencerRemoved,
   seedTerritoryAroundPoint
 } from "./systems/territory.js";
-import { isUnitUnlocked } from "./rules/catalogRules.js";
+import { getConstructedTechCenterLevel, getResearchRequiredTechCenterLevel, isUnitUnlocked } from "./rules/catalogRules.js";
 import {
   getEntityById,
   getPlayerById,
@@ -155,7 +155,7 @@ function createGameState({ menuSetup, matchConfig, hasActiveMatch, uiScreen, loc
   if (matchConfig?.mode === "ai_test") {
     pushLog(state, "AI test match started. Watch both AIs expand, upgrade bases, build Tech Centers, and fight.");
   } else {
-    pushLog(state, "Prototype booted. Build a Tech Center early, tier it up for new factories and research, and upgrade the main base for stats.");
+    pushLog(state, "Prototype booted. Build a Tech Center early to unlock specialist production and research, then level it up for deeper tech rows.");
   }
 
   return state;
@@ -246,6 +246,7 @@ function createPlayerState(id, name, resourceMultiplier, isAiControlled) {
     techTier: 1,
     activeTechUpgrade: null,
     researchedTechIds: [],
+    researchProgressByTechId: {},
     researchQueue: [],
     activeResearch: null,
     startingBaseId: null,
@@ -384,9 +385,40 @@ export function startResearch(state, playerId, techId) {
     return true;
   }
 
-  player.activeResearch = createActiveResearchState(techId);
+  player.activeResearch = createActiveResearchState(player, techId);
   markPlayerDirty(state, playerId);
   pushLog(state, `${player.name} started research: ${definition.displayName}.`);
+  return true;
+}
+
+export function toggleResearchPaused(state, playerId) {
+  const player = getPlayerById(state, playerId);
+  if (!player?.activeResearch) {
+    return false;
+  }
+
+  player.activeResearch.isPaused = !player.activeResearch.isPaused;
+  markPlayerDirty(state, playerId);
+  const techDefinition = state.catalog.tech[player.activeResearch.techId];
+  pushLog(
+    state,
+    `${player.name} ${player.activeResearch.isPaused ? "paused" : "resumed"} research: ${techDefinition.displayName}.`
+  );
+  return true;
+}
+
+export function cancelActiveResearch(state, playerId) {
+  const player = getPlayerById(state, playerId);
+  if (!player?.activeResearch) {
+    return false;
+  }
+
+  const techDefinition = state.catalog.tech[player.activeResearch.techId];
+  storeResearchProgress(player, player.activeResearch.techId, player.activeResearch.progressSeconds);
+  player.activeResearch = null;
+  markPlayerDirty(state, playerId);
+  pushLog(state, `${player.name} removed current research: ${techDefinition.displayName}.`);
+  tryStartQueuedResearch(state, playerId);
   return true;
 }
 
@@ -431,10 +463,26 @@ export function beginResearchNow(state, playerId, techId) {
     return false;
   }
 
-  player.activeResearch = createActiveResearchState(techId);
+  player.activeResearch = createActiveResearchState(player, techId);
   markPlayerDirty(state, playerId);
   pushLog(state, `${player.name} started research: ${definition.displayName}.`);
   return true;
+}
+
+export function tryStartQueuedResearch(state, playerId) {
+  const player = getPlayerById(state, playerId);
+  if (!player || player.activeResearch || player.researchQueue.length === 0) {
+    return false;
+  }
+
+  const [nextTechId] = player.researchQueue;
+  if (!canStartResearchNow(state, playerId, nextTechId)) {
+    return false;
+  }
+
+  player.researchQueue.shift();
+  markPlayerDirty(state, playerId);
+  return beginResearchNow(state, playerId, nextTechId);
 }
 
 export function setProductionBuildingsEnabled(state, buildingIds, enabled) {
@@ -688,15 +736,11 @@ function getWaypointResolutionOptions(building) {
 
 function canPlayerAccessResearch(state, playerId, definition) {
   const player = getPlayerById(state, playerId);
-  if (!player || player.techTier < definition.requiredTechTier) {
+  if (!player) {
     return false;
   }
 
-  const techStructures = getOwnedBuildings(state, playerId, "tech_structure").filter(
-    (building) => building.isConstructed
-  );
-
-  return techStructures.length > 0;
+  return getConstructedTechCenterLevel(state, playerId) >= getResearchRequiredTechCenterLevel(definition);
 }
 
 function isTechLockedByExclusiveChoice(state, player, definition) {
@@ -726,9 +770,22 @@ function isResearchEffectUnlocked(state, playerId, effect) {
   return targetUnitIds.length > 0 && targetUnitIds.every((unitId) => isUnitUnlocked(state, playerId, unitId));
 }
 
-function createActiveResearchState(techId) {
+function createActiveResearchState(player, techId) {
   return {
     techId,
-    progressSeconds: 0
+    progressSeconds: getStoredResearchProgress(player, techId),
+    isPaused: false
   };
+}
+
+function getStoredResearchProgress(player, techId) {
+  return player.researchProgressByTechId?.[techId] ?? 0;
+}
+
+function storeResearchProgress(player, techId, progressSeconds) {
+  player.researchProgressByTechId[techId] = progressSeconds;
+}
+
+export function clearStoredResearchProgress(player, techId) {
+  delete player.researchProgressByTechId[techId];
 }

@@ -24,6 +24,7 @@ import {
 const TARGET_SWITCH_SCORE_ADVANTAGE = 8;
 const MAX_TRANSIENT_EFFECTS = 160;
 const ATTACK_FACING_THRESHOLD_RADIANS = Math.PI / 18;
+const BUILDING_ATTACK_FACING_THRESHOLD_RADIANS = Math.PI / 30;
 
 export function updateCombat(state, dt) {
   pruneExpiredTransientEffects(state);
@@ -85,19 +86,35 @@ function updateBuildings(state, dt, combatSpatialIndex) {
     }
 
     building.attackCooldownRemaining = Math.max(0, building.attackCooldownRemaining - dt);
-    const target = acquireTarget(state, building, defenseProfile, combatSpatialIndex);
+    let target = building.currentTargetId ? getEntityById(state, building.currentTargetId) : null;
+    if (target && !canContinueBuildingTargeting(building, target, defenseProfile)) {
+      target = null;
+      building.currentTargetId = null;
+    }
+
+    if (!target) {
+      target = acquireTarget(state, building, defenseProfile, combatSpatialIndex);
+      building.currentTargetId = target?.id ?? null;
+    }
+
     if (!target) {
       continue;
     }
 
+    const remainingFacingError = rotateBuildingTurretTowardTarget(building, defenseProfile, target, dt);
     const distanceToTarget = Math.hypot(target.x - building.x, target.y - building.y);
     const attackDistance = defenseProfile.attackRange + target.radius;
-    if (distanceToTarget > attackDistance || building.attackCooldownRemaining > 0) {
+    if (
+      distanceToTarget > attackDistance ||
+      building.attackCooldownRemaining > 0 ||
+      remainingFacingError > BUILDING_ATTACK_FACING_THRESHOLD_RADIANS
+    ) {
       continue;
     }
 
     resolveAttack(state, building, target, defenseProfile);
     building.attackCooldownRemaining = defenseProfile.attackCooldown;
+    building.currentTargetId = acquireTarget(state, building, defenseProfile, combatSpatialIndex)?.id ?? null;
   }
 }
 
@@ -293,6 +310,16 @@ function canContinueTargeting(unit, target, stats) {
   );
 }
 
+function canContinueBuildingTargeting(building, target, defenseProfile) {
+  const distance = Math.hypot(target.x - building.x, target.y - building.y);
+  return (
+    target.health > 0 &&
+    target.ownerId !== building.ownerId &&
+    canTargetEntity(defenseProfile.targetFilters, target) &&
+    distance <= defenseProfile.aggroRadius
+  );
+}
+
 function resolveAttack(state, attacker, target, combatProfile) {
   if (combatProfile.attackMode === "projectile") {
     spawnProjectile(state, attacker, target, combatProfile);
@@ -303,11 +330,12 @@ function resolveAttack(state, attacker, target, combatProfile) {
 }
 
 function spawnProjectile(state, attacker, target, combatProfile) {
+  const projectileOrigin = getProjectileOrigin(attacker);
   spawnProjectileFromPoint(state, attacker.ownerId, {
-    x: attacker.x,
-    y: attacker.y,
-    radius: attacker.radius ?? 0,
-    facingAngle: attacker.facingAngle
+    x: projectileOrigin.x,
+    y: projectileOrigin.y,
+    radius: projectileOrigin.radius ?? attacker.radius ?? 0,
+    facingAngle: projectileOrigin.facingAngle
   }, target, {
     projectileRadius: combatProfile.projectileRadius,
     projectileSpeed: combatProfile.projectileSpeed,
@@ -320,6 +348,28 @@ function spawnProjectile(state, attacker, target, combatProfile) {
     chainJumpIndex: 0,
     hitTargetIds: []
   });
+}
+
+function getProjectileOrigin(attacker) {
+  const facingAngle = Number.isFinite(attacker.turretFacingAngle)
+    ? attacker.turretFacingAngle
+    : attacker.facingAngle;
+  if (attacker.type !== "building" || attacker.kind !== "base") {
+    return {
+      x: attacker.x,
+      y: attacker.y,
+      radius: attacker.radius ?? 0,
+      facingAngle
+    };
+  }
+
+  const barrelLength = Math.max(12, (attacker.radius ?? 0) * 0.68);
+  return {
+    x: attacker.x + Math.cos(facingAngle) * barrelLength,
+    y: attacker.y + Math.sin(facingAngle) * barrelLength,
+    radius: 0,
+    facingAngle
+  };
 }
 
 function spawnProjectileFromPoint(state, ownerId, origin, target, attackProfile) {
@@ -557,8 +607,12 @@ function scoreTarget(state, target, ownerId, attacker, combatProfile, combatSpat
   }
 
   let score = distance;
-  if (target.type === "unit") {
+  if (attacker.type === "building" && attacker.kind === "base") {
+    score = scoreBaseDefenseTarget(attacker, target, combatProfile, distance);
+  } else if (target.type === "unit") {
     score -= 10;
+  } else if (target.type === "building") {
+    score += target.kind === "base" ? 14 : 6;
   }
 
   if (
@@ -573,6 +627,58 @@ function scoreTarget(state, target, ownerId, attacker, combatProfile, combatSpat
 
   if (combatProfile.behaviorTags?.includes("prefers_dense_targets")) {
     score -= countNearbyEnemies(state, target, ownerId, combatSpatialIndex) * 3;
+  }
+
+  return score;
+}
+
+function rotateBuildingTurretTowardTarget(building, defenseProfile, target, dt) {
+  const dx = target.x - building.x;
+  const dy = target.y - building.y;
+  if (Math.hypot(dx, dy) < 0.001) {
+    return 0;
+  }
+
+  const desiredAngle = Math.atan2(dy, dx);
+  const currentAngle = Number.isFinite(building.turretFacingAngle) ? building.turretFacingAngle : desiredAngle;
+  const turnRate = defenseProfile.turretTurnRateRadians ?? Number.POSITIVE_INFINITY;
+  if (!Number.isFinite(turnRate)) {
+    building.turretFacingAngle = desiredAngle;
+    return 0;
+  }
+
+  const maxAngleDelta = turnRate * dt;
+  const nextAngle = currentAngle + clampAngleDelta(desiredAngle - currentAngle, maxAngleDelta);
+  building.turretFacingAngle = nextAngle;
+  return Math.abs(normalizeAngleDelta(desiredAngle - nextAngle));
+}
+
+function scoreBaseDefenseTarget(base, target, defenseProfile, distance) {
+  const aggroRadius = Math.max(1, defenseProfile.aggroRadius ?? defenseProfile.attackRange ?? 1);
+  const distanceWeight = defenseProfile.targetDistanceWeight ?? aggroRadius;
+  const distancePower = defenseProfile.targetDistancePower ?? 1;
+  const normalizedDistance = Math.max(0, distance / aggroRadius);
+  let score = Math.pow(normalizedDistance, distancePower) * distanceWeight;
+
+  if (target.type === "unit") {
+    score -= defenseProfile.targetUnitPriorityBonus ?? 0;
+
+    const closeThreatRadius = defenseProfile.targetCloseThreatRadius ?? 0;
+    const closeThreatBonus = defenseProfile.targetCloseThreatBonus ?? 0;
+    const closeThreatPower = defenseProfile.targetCloseThreatPower ?? 1;
+    if (closeThreatRadius > 0 && closeThreatBonus > 0 && distance < closeThreatRadius) {
+      const closeThreatRatio = 1 - distance / closeThreatRadius;
+      score -= Math.pow(closeThreatRatio, closeThreatPower) * closeThreatBonus;
+    }
+  } else if (target.type === "building") {
+    score += defenseProfile.targetStructurePenalty ?? 0;
+    if (target.kind === "base") {
+      score += defenseProfile.targetMainBasePenalty ?? 0;
+    }
+  }
+
+  if (base.currentTargetId === target.id) {
+    score -= defenseProfile.targetCurrentTargetBonus ?? 0;
   }
 
   return score;
@@ -773,4 +879,16 @@ function pruneExpiredTransientEffects(state) {
   state.transientEffects = state.transientEffects.filter((effect) => {
     return state.matchTimeSeconds <= effect.startedAtSeconds + effect.durationSeconds;
   });
+}
+
+function clampAngleDelta(angle, limit) {
+  return clamp(normalizeAngleDelta(angle), -limit, limit);
+}
+
+function normalizeAngleDelta(angle) {
+  return Math.atan2(Math.sin(angle), Math.cos(angle));
+}
+
+function clamp(value, min, max) {
+  return Math.min(max, Math.max(min, value));
 }

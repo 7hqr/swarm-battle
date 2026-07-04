@@ -1,7 +1,6 @@
-import { beginResearchNow, canStartResearchNow, pushLog } from "../gameState.js";
+import { clearStoredResearchProgress, pushLog, tryStartQueuedResearch } from "../gameState.js";
 import { markPlayerDirty } from "../multiplayer/replicationDirtyState.js";
 import { getResearchCost } from "../rules/catalogRules.js";
-import { getPlayerById } from "../state/entities.js";
 
 export function updateResearch(state, dt) {
   for (const player of state.players) {
@@ -14,6 +13,10 @@ export function updateResearch(state, dt) {
     }
 
     const research = player.activeResearch;
+    if (research.isPaused) {
+      continue;
+    }
+
     const definition = state.catalog.tech[research.techId];
     const spendPerSecond = getResearchCostPerSecond(definition, getResearchCost(state, player.id, research.techId));
     const remainingResearchTime = definition.researchTime - research.progressSeconds;
@@ -50,24 +53,9 @@ export function getResearchCostPerSecond(definition, cost = definition.cost) {
 
 function completeResearch(state, player, definition) {
   player.researchedTechIds.push(definition.id);
+  clearStoredResearchProgress(player, definition.id);
   player.activeResearch = null;
   markPlayerDirty(state, player.id);
   pushLog(state, `${player.name} completed research: ${definition.displayName}.`);
   tryStartQueuedResearch(state, player.id);
-}
-
-function tryStartQueuedResearch(state, playerId) {
-  const player = getPlayerById(state, playerId);
-  if (!player || player.activeResearch || player.researchQueue.length === 0) {
-    return false;
-  }
-
-  const [nextTechId] = player.researchQueue;
-  if (!canStartResearchNow(state, playerId, nextTechId)) {
-    return false;
-  }
-
-  player.researchQueue.shift();
-  markPlayerDirty(state, playerId);
-  return beginResearchNow(state, playerId, nextTechId);
 }

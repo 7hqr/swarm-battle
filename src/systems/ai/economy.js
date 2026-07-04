@@ -137,11 +137,14 @@ function getBuildingSpendPerSecond(state, aiContext, building) {
     return 0;
   }
 
-  return getUnitSpendPerSecond(state.catalog.units[unitId]);
+  return getUnitSpendPerSecond(
+    state.catalog.buildings[building.definitionId],
+    state.catalog.units[unitId]
+  );
 }
 
-export function getUnitSpendPerSecond(unitDefinition) {
-  return getUnitProductionCostPerSecond(unitDefinition);
+export function getUnitSpendPerSecond(buildingDefinition, unitDefinition) {
+  return getUnitProductionCostPerSecond(buildingDefinition, unitDefinition);
 }
 
 function compareDisablePriority(left, right) {

@@ -10,17 +10,27 @@ export const buildingDefinitions = [
     healthRegenPerSecond: 5,
     radius: 30,
     producedUnitIds: [],
-    requiredTechTier: 1,
+    requiredTechCenterLevel: 0,
     supportsResearch: false,
     defense: {
       attackRange: 500,
       attackDamage: 25,
       attackCooldown: 0.75,
       aggroRadius: 500,
-      targetFilters: ["unit"],
+      targetFilters: ["unit", "building"],
       attackMode: "projectile",
       projectileSpeed: 360,
-      projectileRadius: 4
+      projectileRadius: 4,
+      turretTurnRateRadians: 2.35,
+      targetDistanceWeight: 100,
+      targetDistancePower: 1.35,
+      targetUnitPriorityBonus: 22,
+      targetCurrentTargetBonus: 12,
+      targetStructurePenalty: 10,
+      targetMainBasePenalty: 14,
+      targetCloseThreatRadius: 150,
+      targetCloseThreatBonus: 36,
+      targetCloseThreatPower: 1.2
     }
   },
   {
@@ -34,7 +44,7 @@ export const buildingDefinitions = [
     healthRegenPerSecond: 2,
     radius: 20,
     producedUnitIds: ["basic"],
-    requiredTechTier: 1,
+    requiredTechCenterLevel: 0,
     supportsResearch: false
   },
   {
@@ -48,7 +58,9 @@ export const buildingDefinitions = [
     healthRegenPerSecond: 2,
     radius: 20,
     producedUnitIds: ["disposable_swarm"],
-    requiredTechTier: 2,
+    productionBatchSize: 2,
+    productionCycleTime: 6,
+    requiredTechCenterLevel: 1,
     supportsResearch: false
   },
   {
@@ -62,7 +74,7 @@ export const buildingDefinitions = [
     healthRegenPerSecond: 2,
     radius: 20,
     producedUnitIds: ["ranged_damage"],
-    requiredTechTier: 2,
+    requiredTechCenterLevel: 1,
     supportsResearch: false
   },
   {
@@ -76,7 +88,7 @@ export const buildingDefinitions = [
     healthRegenPerSecond: 3,
     radius: 25,
     producedUnitIds: ["tanky_frontline"],
-    requiredTechTier: 3,
+    requiredTechCenterLevel: 2,
     supportsResearch: false
   },
   {
@@ -90,7 +102,7 @@ export const buildingDefinitions = [
     healthRegenPerSecond: 3,
     radius: 25,
     producedUnitIds: ["anti_swarm"],
-    requiredTechTier: 3,
+    requiredTechCenterLevel: 2,
     supportsResearch: false
   },
   {
@@ -104,7 +116,7 @@ export const buildingDefinitions = [
     healthRegenPerSecond: 3,
     radius: 25,
     producedUnitIds: ["anti_tank"],
-    requiredTechTier: 3,
+    requiredTechCenterLevel: 2,
     supportsResearch: false
   },
   {
@@ -118,7 +130,8 @@ export const buildingDefinitions = [
     healthRegenPerSecond: 1,
     radius: 18,
     producedUnitIds: [],
-    requiredTechTier: 1,
+    requiredTechCenterLevel: 0,
+    maxOwned: 1,
     supportsResearch: true
   }
 ];

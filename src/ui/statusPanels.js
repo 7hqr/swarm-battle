@@ -252,7 +252,7 @@ function describeAiMacroStatus(state, player, macroDecision) {
   if (player.activeTechUpgrade) {
     return {
       title: "Upgrading tech",
-      detail: `Target tier ${player.activeTechUpgrade.targetTier}`
+      detail: `Target level ${player.activeTechUpgrade.targetTier}`
     };
   }
 

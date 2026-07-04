@@ -43,6 +43,8 @@ export function spawnBuilding(state, { ownerId, definitionId, x, y, construction
     lastProgressSampleSeconds: definition.kind === "base" ? 0 : null,
     productionProgressSeconds: 0,
     attackCooldownRemaining: 0,
+    currentTargetId: definition.defense ? null : undefined,
+    turretFacingAngle: definition.defense ? 0 : undefined,
     constructionCost: constructionCost ?? definition.cost,
     constructionProgressSeconds: isConstructed ? definition.buildTime : 0,
     isConstructed,

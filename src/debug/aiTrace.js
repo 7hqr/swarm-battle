@@ -13,6 +13,11 @@ export const AI_TRACE_CATEGORY_DEFINITIONS = [
     description: "Economy, reserve, and commitment detail for blocked spending."
   },
   {
+    id: "placement",
+    label: "Placement Decisions",
+    description: "Chosen build location, candidate anchors, and top scored placement alternatives."
+  },
+  {
     id: "base",
     label: "Base Decisions",
     description: "Main-base relocation role and candidate choice."
@@ -33,6 +38,11 @@ export const AI_TRACE_PRESET_DEFINITIONS = [
     id: "economy",
     label: "Economy Audit",
     categoryIds: ["macro", "macro_audit"]
+  },
+  {
+    id: "placement_audit",
+    label: "Placement Audit",
+    categoryIds: ["macro", "macro_audit", "placement"]
   },
   {
     id: "base_relocation",

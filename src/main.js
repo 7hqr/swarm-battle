@@ -17,6 +17,7 @@ import {
 } from "./debug/performance.js";
 import {
   capturePresentationSnapshot,
+  getPlayerDisplayValue,
   recordAuthorityPresentationSnapshot,
   recordRemotePresentationSnapshot,
   setPresentationFrameAlpha
@@ -386,6 +387,22 @@ function handleUiAction(action, value) {
     return;
   }
 
+  if (action === "toggle-research-paused") {
+    dispatchGameplayCommand({
+      type: getGameplayCommandTypes().TOGGLE_RESEARCH_PAUSED,
+      playerId: localPlayerId
+    });
+    return;
+  }
+
+  if (action === "cancel-active-research") {
+    dispatchGameplayCommand({
+      type: getGameplayCommandTypes().CANCEL_ACTIVE_RESEARCH,
+      playerId: localPlayerId
+    });
+    return;
+  }
+
   if (action === "remove-research-queue-item") {
     dispatchGameplayCommand({
       type: getGameplayCommandTypes().REMOVE_RESEARCH_QUEUE_ITEM,
@@ -475,6 +492,8 @@ function renderPanels() {
   if (changed) {
     syncViewportPadding();
   }
+
+  syncLiveResearchProgress();
 }
 
 function patchPanel(element, cacheKey, html) {
@@ -490,6 +509,55 @@ function patchPanel(element, cacheKey, html) {
   panelHtmlCache[cacheKey] = html;
   element.innerHTML = html;
   return true;
+}
+
+function syncLiveResearchProgress() {
+  const localPlayerId = getLocalPlayerId(state);
+  const player = localPlayerId ? state.players.find((candidate) => candidate.id === localPlayerId) : null;
+  const activeResearch = player?.activeResearch;
+  const launcherBarElement = document.querySelector("[data-live-research-launcher-progress-bar] .progress-bar-fill");
+  const launcherLabelElement = document.querySelector("[data-live-research-launcher-progress-label]");
+  const statusBarElement = document.querySelector("[data-live-research-status-progress-bar] .progress-bar-fill");
+  const statusLabelElement = document.querySelector("[data-live-research-status-progress-label]");
+
+  if (!activeResearch) {
+    if (launcherBarElement) {
+      launcherBarElement.style.width = "0%";
+    }
+    if (launcherLabelElement) {
+      launcherLabelElement.textContent = "";
+    }
+    if (statusBarElement) {
+      statusBarElement.style.width = "0%";
+    }
+    if (statusLabelElement) {
+      statusLabelElement.textContent = "";
+    }
+    return;
+  }
+
+  const tech = state.catalog.tech[activeResearch.techId];
+  const displayProgressSeconds = getPlayerDisplayValue(
+    state,
+    player,
+    "activeResearchProgressSeconds",
+    activeResearch.progressSeconds
+  );
+  const progress = Math.max(0, Math.min(1, displayProgressSeconds / tech.researchTime));
+  const progressPercent = `${(progress * 100).toFixed(0)}%`;
+
+  if (launcherBarElement) {
+    launcherBarElement.style.width = progressPercent;
+  }
+  if (launcherLabelElement) {
+    launcherLabelElement.textContent = progressPercent;
+  }
+  if (statusBarElement) {
+    statusBarElement.style.width = progressPercent;
+  }
+  if (statusLabelElement) {
+    statusLabelElement.textContent = activeResearch.isPaused ? `Paused at ${progressPercent}` : `${progressPercent} complete`;
+  }
 }
 
 function resizeCanvas() {

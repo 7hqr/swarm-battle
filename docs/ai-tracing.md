@@ -23,6 +23,7 @@ Each export writes a JSON payload with:
 
 - `macro`: top approved and rejected strategic actions
 - `macro_audit`: economy and commitment audit detail
+- `placement`: chosen build location, anchor set, blocked-placement counts, and top scored alternatives
 - `base`: base relocation decisions
 - `base_route`: requested and sanitized waypoint routes
 - `base_move`: live base movement and path status

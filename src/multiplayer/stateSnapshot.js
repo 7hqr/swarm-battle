@@ -224,6 +224,7 @@ function clonePlayer(player) {
     techTier: player.techTier,
     activeTechUpgrade: player.activeTechUpgrade ? { ...player.activeTechUpgrade } : null,
     researchedTechIds: [...player.researchedTechIds],
+    researchProgressByTechId: { ...player.researchProgressByTechId },
     researchQueue: [...player.researchQueue],
     activeResearch: player.activeResearch ? { ...player.activeResearch } : null,
     notifications: [...player.notifications],

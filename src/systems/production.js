@@ -1,4 +1,9 @@
-import { getProducedUnitId, isUnitUnlocked } from "../rules/catalogRules.js";
+import {
+  getProducedUnitId,
+  getProductionBatchSize,
+  getProductionCycleTime,
+  isUnitUnlocked
+} from "../rules/catalogRules.js";
 import { markEntityDirty, markPlayerDirty } from "../multiplayer/replicationDirtyState.js";
 import { getEntityById, getOwnedBuildings } from "../state/entities.js";
 import { spawnUnit } from "../state/spawn.js";
@@ -27,8 +32,10 @@ export function updateProduction(state, dt) {
   }
 }
 
-export function getUnitProductionCostPerSecond(unitDefinition) {
-  return unitDefinition.cost / unitDefinition.buildTime;
+export function getUnitProductionCostPerSecond(buildingDefinition, unitDefinition) {
+  const cycleTime = getProductionCycleTime(buildingDefinition, unitDefinition);
+  const batchSize = getProductionBatchSize(buildingDefinition);
+  return (unitDefinition.cost * batchSize) / cycleTime;
 }
 
 function updateProductionBuilding(state, building, dt, remainingResources) {
@@ -44,13 +51,14 @@ function updateProductionBuilding(state, building, dt, remainingResources) {
   }
 
   const unitStats = state.catalog.units[producedUnitId];
-  const remainingBuildTime = unitStats.buildTime - building.productionProgressSeconds;
+  const productionCycleTime = getProductionCycleTime(buildingDefinition, unitStats);
+  const remainingBuildTime = productionCycleTime - building.productionProgressSeconds;
   if (remainingBuildTime <= 0) {
-    spawnCompletedUnit(state, building, producedUnitId);
+    spawnCompletedUnit(state, building, producedUnitId, getProductionBatchSize(buildingDefinition));
     return remainingResources;
   }
 
-  const spendPerSecond = getUnitProductionCostPerSecond(unitStats);
+  const spendPerSecond = getUnitProductionCostPerSecond(buildingDefinition, unitStats);
   const affordableSeconds = spendPerSecond > 0 ? remainingResources / spendPerSecond : dt;
   const progressedSeconds = Math.max(0, Math.min(dt, remainingBuildTime, affordableSeconds));
   if (progressedSeconds <= 0) {
@@ -61,21 +69,23 @@ function updateProductionBuilding(state, building, dt, remainingResources) {
   remainingResources -= progressedSeconds * spendPerSecond;
   markEntityDirty(state, building.id);
 
-  if (building.productionProgressSeconds + 0.0001 < unitStats.buildTime) {
+  if (building.productionProgressSeconds + 0.0001 < productionCycleTime) {
     return remainingResources;
   }
 
-  spawnCompletedUnit(state, building, producedUnitId);
+  spawnCompletedUnit(state, building, producedUnitId, getProductionBatchSize(buildingDefinition));
   return remainingResources;
 }
 
-function spawnCompletedUnit(state, building, unitId) {
+function spawnCompletedUnit(state, building, unitId, batchSize) {
   const originBuilding = getEntityById(state, building.id);
   if (!originBuilding) {
     return;
   }
 
-  spawnUnit(state, building.ownerId, unitId, originBuilding);
+  for (let index = 0; index < batchSize; index += 1) {
+    spawnUnit(state, building.ownerId, unitId, originBuilding);
+  }
   building.productionProgressSeconds = 0;
   markEntityDirty(state, building.id);
 }

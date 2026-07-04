@@ -44,7 +44,7 @@ const rawTechDefinitions = [
     displayName: "Health +10",
     description: "Basic max health +10.",
     cost: 170,
-    researchTime: 32,
+    researchTime: 64,
     requiredTechTier: 1,
     prerequisiteIds: [],
     exclusiveGroupId: null,
@@ -65,7 +65,7 @@ const rawTechDefinitions = [
     displayName: "Attack cooldown -0.08s",
     description: "Basic attack cooldown -0.08s.",
     cost: 210,
-    researchTime: 38,
+    researchTime: 76,
     requiredTechTier: 1,
     prerequisiteIds: ["basic_health_1"],
     exclusiveGroupId: null,
@@ -86,7 +86,7 @@ const rawTechDefinitions = [
     displayName: "Pressure focus",
     description: "Basic move speed +5 and attack range +8.",
     cost: 300,
-    researchTime: 50,
+    researchTime: 100,
     requiredTechTier: 1,
     prerequisiteIds: ["basic_attack_cooldown_1"],
     exclusiveGroupId: "basic_fork_1",
@@ -114,7 +114,7 @@ const rawTechDefinitions = [
     displayName: "Line focus",
     description: "Basic max health +14 and aggro persistence time +0.35s.",
     cost: 300,
-    researchTime: 50,
+    researchTime: 100,
     requiredTechTier: 1,
     prerequisiteIds: ["basic_attack_cooldown_1"],
     exclusiveGroupId: "basic_fork_1",
@@ -142,7 +142,7 @@ const rawTechDefinitions = [
     displayName: "Pressure follow-up",
     description: "Basic build time -0.5s.",
     cost: 400,
-    researchTime: 64,
+    researchTime: 128,
     requiredTechTier: 1,
     prerequisiteIds: ["basic_pressure_focus"],
     exclusiveGroupId: null,
@@ -163,7 +163,7 @@ const rawTechDefinitions = [
     displayName: "Line follow-up",
     description: "Basic max health +16.",
     cost: 400,
-    researchTime: 64,
+    researchTime: 128,
     requiredTechTier: 1,
     prerequisiteIds: ["basic_line_focus"],
     exclusiveGroupId: null,
@@ -184,7 +184,7 @@ const rawTechDefinitions = [
     displayName: "Move speed +6",
     description: "Swarm move speed +6.",
     cost: 180,
-    researchTime: 32,
+    researchTime: 64,
     requiredTechTier: 2,
     prerequisiteIds: [],
     exclusiveGroupId: null,
@@ -205,7 +205,7 @@ const rawTechDefinitions = [
     displayName: "Build time -0.35s",
     description: "Swarm build time -0.35s.",
     cost: 220,
-    researchTime: 38,
+    researchTime: 76,
     requiredTechTier: 2,
     prerequisiteIds: ["swarm_move_speed_1"],
     exclusiveGroupId: null,
@@ -226,7 +226,7 @@ const rawTechDefinitions = [
     displayName: "Surround focus",
     description: "Swarm attack cooldown -0.05s and max turn rate +1.2.",
     cost: 300,
-    researchTime: 50,
+    researchTime: 100,
     requiredTechTier: 2,
     prerequisiteIds: ["swarm_build_time_1"],
     exclusiveGroupId: "swarm_fork_1",
@@ -254,7 +254,7 @@ const rawTechDefinitions = [
     displayName: "Approach focus",
     description: "Swarm max health +8 and leash distance +18.",
     cost: 300,
-    researchTime: 50,
+    researchTime: 100,
     requiredTechTier: 2,
     prerequisiteIds: ["swarm_build_time_1"],
     exclusiveGroupId: "swarm_fork_1",
@@ -282,7 +282,7 @@ const rawTechDefinitions = [
     displayName: "Surround follow-up",
     description: "Swarm attack damage +1 and move speed +5.",
     cost: 390,
-    researchTime: 62,
+    researchTime: 124,
     requiredTechTier: 2,
     prerequisiteIds: ["swarm_surround_focus"],
     exclusiveGroupId: null,
@@ -310,7 +310,7 @@ const rawTechDefinitions = [
     displayName: "Approach follow-up",
     description: "Swarm aggro persistence time +0.45s and target switch cooldown -0.05s.",
     cost: 390,
-    researchTime: 62,
+    researchTime: 124,
     requiredTechTier: 2,
     prerequisiteIds: ["swarm_approach_focus"],
     exclusiveGroupId: null,
@@ -338,7 +338,7 @@ const rawTechDefinitions = [
     displayName: "Attack damage +2",
     description: "Ranged attack damage +2.",
     cost: 185,
-    researchTime: 34,
+    researchTime: 68,
     requiredTechTier: 2,
     prerequisiteIds: [],
     exclusiveGroupId: null,
@@ -359,7 +359,7 @@ const rawTechDefinitions = [
     displayName: "Move speed +3",
     description: "Ranged move speed +3.",
     cost: 225,
-    researchTime: 40,
+    researchTime: 80,
     requiredTechTier: 2,
     prerequisiteIds: ["ranged_attack_damage_1"],
     exclusiveGroupId: null,
@@ -380,7 +380,7 @@ const rawTechDefinitions = [
     displayName: "Fire lane focus",
     description: "Ranged attack range +16 and attack damage +2.",
     cost: 310,
-    researchTime: 52,
+    researchTime: 104,
     requiredTechTier: 2,
     prerequisiteIds: ["ranged_mobility_1"],
     exclusiveGroupId: "ranged_fork_1",
@@ -408,7 +408,7 @@ const rawTechDefinitions = [
     displayName: "Self-preservation focus",
     description: "Ranged max health +12 and move speed +4.",
     cost: 310,
-    researchTime: 52,
+    researchTime: 104,
     requiredTechTier: 2,
     prerequisiteIds: ["ranged_mobility_1"],
     exclusiveGroupId: "ranged_fork_1",
@@ -436,7 +436,7 @@ const rawTechDefinitions = [
     displayName: "Fire lane follow-up",
     description: "Ranged attack cooldown -0.12s.",
     cost: 405,
-    researchTime: 66,
+    researchTime: 132,
     requiredTechTier: 2,
     prerequisiteIds: ["ranged_fire_lane_focus"],
     exclusiveGroupId: null,
@@ -457,7 +457,7 @@ const rawTechDefinitions = [
     displayName: "Self-preservation follow-up",
     description: "Ranged target switch cooldown -0.2s and max health +10.",
     cost: 405,
-    researchTime: 66,
+    researchTime: 132,
     requiredTechTier: 2,
     prerequisiteIds: ["ranged_self_preservation_focus"],
     exclusiveGroupId: null,
@@ -485,7 +485,7 @@ const rawTechDefinitions = [
     displayName: "Health +30",
     description: "Frontline max health +30.",
     cost: 250,
-    researchTime: 40,
+    researchTime: 80,
     requiredTechTier: 3,
     prerequisiteIds: [],
     exclusiveGroupId: null,
@@ -506,7 +506,7 @@ const rawTechDefinitions = [
     displayName: "Move speed +3",
     description: "Frontline move speed +3.",
     cost: 290,
-    researchTime: 46,
+    researchTime: 92,
     requiredTechTier: 3,
     prerequisiteIds: ["frontline_health_1"],
     exclusiveGroupId: null,
@@ -527,7 +527,7 @@ const rawTechDefinitions = [
     displayName: "Reactive plating",
     description: "Frontline max health +36, aggro persistence time +0.8s, and reflect damage +6.",
     cost: 360,
-    researchTime: 56,
+    researchTime: 112,
     requiredTechTier: 3,
     prerequisiteIds: ["frontline_move_speed_1"],
     exclusiveGroupId: "frontline_fork_1",
@@ -567,7 +567,7 @@ const rawTechDefinitions = [
     displayName: "Detonation march",
     description: "Frontline move speed +4, death explosion damage +42, loses its normal attack, and keeps marching its route.",
     cost: 360,
-    researchTime: 56,
+    researchTime: 112,
     requiredTechTier: 3,
     prerequisiteIds: ["frontline_move_speed_1"],
     exclusiveGroupId: "frontline_fork_1",
@@ -612,7 +612,7 @@ const rawTechDefinitions = [
     displayName: "Reactive overload",
     description: "Frontline max health +44 and reflect damage +8.",
     cost: 460,
-    researchTime: 70,
+    researchTime: 140,
     requiredTechTier: 3,
     prerequisiteIds: ["frontline_wall_focus"],
     exclusiveGroupId: null,
@@ -640,7 +640,7 @@ const rawTechDefinitions = [
     displayName: "Detonation overload",
     description: "Frontline death explosion damage +28, death explosion radius +20, and move speed +3.",
     cost: 460,
-    researchTime: 70,
+    researchTime: 140,
     requiredTechTier: 3,
     prerequisiteIds: ["frontline_pressure_focus"],
     exclusiveGroupId: null,
@@ -675,7 +675,7 @@ const rawTechDefinitions = [
     displayName: "Chain range +24",
     description: "Anti-swarm chain range +24.",
     cost: 250,
-    researchTime: 40,
+    researchTime: 80,
     requiredTechTier: 3,
     prerequisiteIds: [],
     exclusiveGroupId: null,
@@ -696,7 +696,7 @@ const rawTechDefinitions = [
     displayName: "Attack cooldown -0.08s",
     description: "Anti-swarm attack cooldown -0.08s.",
     cost: 290,
-    researchTime: 46,
+    researchTime: 92,
     requiredTechTier: 3,
     prerequisiteIds: ["anti_swarm_chain_range_1"],
     exclusiveGroupId: null,
@@ -717,7 +717,7 @@ const rawTechDefinitions = [
     displayName: "Chain coverage focus",
     description: "Anti-swarm chain max jumps +1 and chain damage multiplier -0.08.",
     cost: 360,
-    researchTime: 56,
+    researchTime: 112,
     requiredTechTier: 3,
     prerequisiteIds: ["anti_swarm_attack_cooldown_1"],
     exclusiveGroupId: "anti_swarm_fork_1",
@@ -745,7 +745,7 @@ const rawTechDefinitions = [
     displayName: "Chain burst focus",
     description: "Anti-swarm chain max jumps -1, chain damage multiplier +0.14, and attack damage +2.",
     cost: 360,
-    researchTime: 56,
+    researchTime: 112,
     requiredTechTier: 3,
     prerequisiteIds: ["anti_swarm_attack_cooldown_1"],
     exclusiveGroupId: "anti_swarm_fork_1",
@@ -780,7 +780,7 @@ const rawTechDefinitions = [
     displayName: "Chain coverage follow-up",
     description: "Anti-swarm chain range +28.",
     cost: 460,
-    researchTime: 70,
+    researchTime: 140,
     requiredTechTier: 3,
     prerequisiteIds: ["anti_swarm_chain_coverage_focus"],
     exclusiveGroupId: null,
@@ -801,7 +801,7 @@ const rawTechDefinitions = [
     displayName: "Chain burst follow-up",
     description: "Anti-swarm attack damage +3.",
     cost: 460,
-    researchTime: 70,
+    researchTime: 140,
     requiredTechTier: 3,
     prerequisiteIds: ["anti_swarm_chain_burst_focus"],
     exclusiveGroupId: null,
@@ -822,7 +822,7 @@ const rawTechDefinitions = [
     displayName: "Attack damage +5",
     description: "Anti-tank attack damage +5.",
     cost: 250,
-    researchTime: 40,
+    researchTime: 80,
     requiredTechTier: 3,
     prerequisiteIds: [],
     exclusiveGroupId: null,
@@ -843,7 +843,7 @@ const rawTechDefinitions = [
     displayName: "Projectile speed +35",
     description: "Anti-tank projectile speed +35.",
     cost: 290,
-    researchTime: 46,
+    researchTime: 92,
     requiredTechTier: 3,
     prerequisiteIds: ["anti_tank_attack_damage_1"],
     exclusiveGroupId: null,
@@ -864,7 +864,7 @@ const rawTechDefinitions = [
     displayName: "Heavy focus",
     description: "Anti-tank attack damage +7.",
     cost: 360,
-    researchTime: 56,
+    researchTime: 112,
     requiredTechTier: 3,
     prerequisiteIds: ["anti_tank_projectile_speed_1"],
     exclusiveGroupId: "anti_tank_fork_1",
@@ -885,7 +885,7 @@ const rawTechDefinitions = [
     displayName: "Tracking focus",
     description: "Anti-tank projectile speed +30 and target switch cooldown -0.2s.",
     cost: 360,
-    researchTime: 56,
+    researchTime: 112,
     requiredTechTier: 3,
     prerequisiteIds: ["anti_tank_projectile_speed_1"],
     exclusiveGroupId: "anti_tank_fork_1",
@@ -913,7 +913,7 @@ const rawTechDefinitions = [
     displayName: "Heavy follow-up",
     description: "Anti-tank attack range +12 and attack cooldown -0.1s.",
     cost: 460,
-    researchTime: 70,
+    researchTime: 140,
     requiredTechTier: 3,
     prerequisiteIds: ["anti_tank_heavy_focus"],
     exclusiveGroupId: null,
@@ -941,7 +941,7 @@ const rawTechDefinitions = [
     displayName: "Tracking follow-up",
     description: "Anti-tank projectile speed +45 and move speed +4.",
     cost: 460,
-    researchTime: 70,
+    researchTime: 140,
     requiredTechTier: 3,
     prerequisiteIds: ["anti_tank_tracking_focus"],
     exclusiveGroupId: null,
@@ -966,15 +966,23 @@ const rawTechDefinitions = [
 ];
 
 export const techBranchDefinitions = rawTechBranchDefinitions.map((definition) => ({ ...definition }));
-export const techDefinitions = rawTechDefinitions.map((definition) => ({
-  ...definition,
-  prerequisiteIds: [...definition.prerequisiteIds],
-  layout: { ...definition.layout },
-  effects: definition.effects.map((effect) => ({
-    ...effect,
-    target: effect.target ? { unitIds: [...(effect.target.unitIds ?? [])] } : effect.target
-  }))
-}));
+export const techDefinitions = rawTechDefinitions.map((definition) => {
+  const {
+    requiredTechTier: _obsoleteRequiredTechTier,
+    ...resolvedDefinition
+  } = definition;
+
+  return {
+    ...resolvedDefinition,
+    requiredTechCenterLevel: definition.layout.row + 1,
+    prerequisiteIds: [...definition.prerequisiteIds],
+    layout: { ...definition.layout },
+    effects: definition.effects.map((effect) => ({
+      ...effect,
+      target: effect.target ? { unitIds: [...(effect.target.unitIds ?? [])] } : effect.target
+    }))
+  };
+});
 
 const VALID_TECH_BEHAVIOR_IDS = new Set([
   "death_explosion",
@@ -1011,6 +1019,10 @@ function validateTechDefinitions(branchDefinitions, definitions) {
 
     if (!Number.isInteger(definition.layout?.row) || !Number.isInteger(definition.layout?.column)) {
       throw new Error(`Tech ${definition.id} must define integer layout.row and layout.column.`);
+    }
+
+    if (!Number.isInteger(definition.requiredTechCenterLevel) || definition.requiredTechCenterLevel !== definition.layout.row + 1) {
+      throw new Error(`Tech ${definition.id} must derive requiredTechCenterLevel from its layout row.`);
     }
 
     const layoutKey = `${definition.branchId}:${definition.layout.row}:${definition.layout.column}`;
@@ -1117,4 +1129,5 @@ function validateNoCycles(techId, techByIdMap, visited, activeStack) {
   activeStack.delete(techId);
   visited.add(techId);
 }
+
 

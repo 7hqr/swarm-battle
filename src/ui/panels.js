@@ -4,10 +4,14 @@ import {
   canUpgradeTech
 } from "../gameState.js";
 import {
+  getBuildingAvailability,
   getBuildingCost,
+  getConstructedTechCenterLevel,
   getProducedUnitId,
+  getProductionBatchSize,
+  getProductionCycleTime,
   getResearchCost,
-  isBuildingUnlocked,
+  getResearchRequiredTechCenterLevel,
   isProductionKind
 } from "../rules/catalogRules.js";
 import {
@@ -124,21 +128,24 @@ function renderSingleSelectionSummary(state, selected) {
 
   if (isProductionKind(buildingDefinition.kind)) {
     const producedUnitId = getProducedUnitId(buildingDefinition);
+    const unitDefinition = state.catalog.units[producedUnitId];
+    const batchSize = getProductionBatchSize(buildingDefinition);
+    const cycleTime = getProductionCycleTime(buildingDefinition, unitDefinition);
     details.push(`<div class="meta">Production: ${selected.enabled ? "active" : "inactive"}</div>`);
-    details.push(`<div class="meta">Produces: ${state.catalog.units[producedUnitId].displayName}</div>`);
+    details.push(`<div class="meta">Produces: ${batchSize} ${unitDefinition.displayName}${batchSize === 1 ? "" : " units"} per ${cycleTime}s</div>`);
   }
 
   if (buildingDefinition.kind === "base" && playerOwned) {
     const player = getLocalPlayer(state);
     const currentTier = state.catalog.baseTiers[player.baseTier];
     details.push(`<div class="meta">Base tier: ${currentTier.displayName}</div>`);
-    details.push(`<div class="meta">Tech tier: ${state.catalog.techTiers[player.techTier].displayName}</div>`);
+    details.push(`<div class="meta">Tech Center level: ${state.catalog.techTiers[player.techTier].displayName}</div>`);
     details.push(`<div class="meta">Right click to set movement path. Shift+right click appends.</div>`);
   }
 
   if (buildingDefinition.supportsResearch && playerOwned && selected.isConstructed) {
     const player = getLocalPlayer(state);
-    details.push(`<div class="meta">Tech tier: ${state.catalog.techTiers[player.techTier].displayName}</div>`);
+    details.push(`<div class="meta">Tech Center level: ${state.catalog.techTiers[player.techTier].displayName}</div>`);
     const researchLabel = player.activeResearch
       ? state.catalog.tech[player.activeResearch.techId].displayName
       : "None";
@@ -195,7 +202,10 @@ function renderBuildDeck(state) {
     const definition = state.catalog.buildings[buildingId];
     const cost = localPlayerId ? getBuildingCost(state, localPlayerId, buildingId) : 0;
     const active = state.uiMode === "place_building" && state.pendingBuildingId === buildingId;
-    const unlocked = localPlayerId ? isBuildingUnlocked(state, localPlayerId, buildingId) : false;
+    const availability = localPlayerId
+      ? getBuildingAvailability(state, localPlayerId, buildingId)
+      : { unlocked: false, reason: "Unavailable" };
+    const unlocked = availability.unlocked;
     const disabled = commandsDisabled || !unlocked;
 
     return `
@@ -211,7 +221,7 @@ function renderBuildDeck(state) {
         ${unlocked ? "" : `<span class="command-card-lock" aria-hidden="true">🔒</span>`}
         <span class="command-card-title">${definition.displayName}</span>
         <span class="command-card-meta">${cost} resources</span>
-        <span class="command-card-meta">${unlocked ? "Available" : `Tech Tier ${definition.requiredTechTier}`}</span>
+        <span class="command-card-meta">${availability.reason}</span>
       </button>
     `;
   }).join("");
@@ -225,22 +235,22 @@ function renderBuildDeck(state) {
 
 function renderResearchStatus(state) {
   const player = getLocalPlayer(state);
+  const commandsDisabled = !canIssueMatchCommands(state);
   const activeResearch = player?.activeResearch
       ? (() => {
           const tech = state.catalog.tech[player.activeResearch.techId];
-          const displayProgressSeconds = getPlayerDisplayValue(
-            state,
-            player,
-            "activeResearchProgressSeconds",
-            player.activeResearch.progressSeconds
-          );
-          const progress = Math.max(0, Math.min(1, displayProgressSeconds / tech.researchTime));
           return `
-            <div class="meta">Researching ${tech.displayName}</div>
-            <div class="progress-bar">
-              <div class="progress-bar-fill" style="width:${(progress * 100).toFixed(1)}%"></div>
+            <div class="meta">Researching ${tech.displayName}${player.activeResearch.isPaused ? " (Paused)" : ""}</div>
+            <div class="progress-bar" data-live-research-status-progress-bar>
+              <div class="progress-bar-fill"></div>
             </div>
-            <div class="meta">${(progress * 100).toFixed(0)}% complete</div>
+            <div class="meta" data-live-research-status-progress-label></div>
+            <div class="row">
+              <button type="button" data-action="toggle-research-paused" ${commandsDisabled ? "disabled" : ""}>
+                ${player.activeResearch.isPaused ? "Resume" : "Pause"}
+              </button>
+              <button type="button" data-action="cancel-active-research" ${commandsDisabled ? "disabled" : ""}>Remove</button>
+            </div>
           `;
         })()
     : `<div class="meta">No active research.</div>`;
@@ -408,10 +418,12 @@ function renderSingleSelectionCommands(state, selected, controlsDisabled) {
   if (buildingDefinition.producedUnitIds.length > 0) {
     const unitId = getProducedUnitId(buildingDefinition);
     const unitDefinition = state.catalog.units[unitId];
+    const batchSize = getProductionBatchSize(buildingDefinition);
+    const cycleTime = getProductionCycleTime(buildingDefinition, unitDefinition);
 
     return `
       <div class="stack">
-        <div class="meta">Produces ${unitDefinition.displayName}.</div>
+        <div class="meta">Produces ${batchSize} ${unitDefinition.displayName}${batchSize === 1 ? "" : " units"} per ${cycleTime}s.</div>
         <div class="row">
           <button type="button" data-action="activate-production" ${controlsDisabled || selected.enabled ? "disabled" : ""}>Activate</button>
           <button type="button" data-action="deactivate-production" ${controlsDisabled || !selected.enabled ? "disabled" : ""}>Deactivate</button>
@@ -476,7 +488,7 @@ function renderSingleSelectionCommands(state, selected, controlsDisabled) {
 
     return `
       <div class="stack">
-        <div class="meta">Current tier: ${currentTier.displayName}</div>
+        <div class="meta">Current level: ${currentTier.displayName}</div>
         ${activeUpgrade}
         <button type="button" data-action="open-research-modal" ${controlsDisabled ? "disabled" : ""}>Research</button>
       </div>
@@ -539,11 +551,17 @@ function formatBuildingTooltip(state, definition, cost) {
     `Cost: ${cost}`,
     `Build Time: ${definition.buildTime}s`,
     `Health: ${definition.maxHealth}`,
-    `Required Tech Tier: ${definition.requiredTechTier}`
+    formatTechCenterRequirementLine(definition.requiredTechCenterLevel)
   ];
 
+  if (Number.isInteger(definition.maxOwned)) {
+    lines.push(`Build Limit: ${definition.maxOwned}`);
+  }
+
   if (definition.producedUnitIds.length > 0) {
+    const unitDefinition = state.catalog.units[getProducedUnitId(definition)];
     lines.push(`Produces: ${producedUnits}`);
+    lines.push(`Production: ${getProductionBatchSize(definition)} per ${getProductionCycleTime(definition, unitDefinition)}s`);
   }
 
   if (definition.supportsResearch) {
@@ -558,7 +576,7 @@ function formatResearchTooltip(state, techDefinition, cost, prerequisiteSummary,
     techDefinition.displayName,
     techDefinition.description,
     `Cost: ${cost}`,
-    `Tech Tier: ${techDefinition.requiredTechTier}`,
+    `Tech Center Requirement: Lv. ${getResearchRequiredTechCenterLevel(techDefinition)}`,
     `Research Time: ${techDefinition.researchTime}s`,
     `Prereqs: ${prerequisiteSummary}`,
     exclusiveLockedBy ? `Exclusive Lock: ${exclusiveLockedBy.displayName}` : null
@@ -603,13 +621,12 @@ function getResearchAvailabilityLabel(state, player, techDefinition, available) 
     return "Unavailable";
   }
 
-  if (player.techTier < techDefinition.requiredTechTier) {
-    return `Needs Tech Tier ${techDefinition.requiredTechTier}`;
-  }
-
-  const techCenterCount = getOwnedBuildings(state, player.id, "tech_structure").filter((building) => building.isConstructed).length;
-  if (techCenterCount === 0) {
-    return "Needs Tech Center";
+  const techCenterLevel = getConstructedTechCenterLevel(state, player.id);
+  const requiredTechCenterLevel = getResearchRequiredTechCenterLevel(techDefinition);
+  if (techCenterLevel < requiredTechCenterLevel) {
+    return techCenterLevel === 0
+      ? "Needs Tech Center"
+      : `Needs Tech Center Lv. ${requiredTechCenterLevel}`;
   }
 
   for (const prerequisiteId of techDefinition.prerequisiteIds) {
@@ -661,8 +678,34 @@ function renderResearchLauncher(state) {
   }
 
   const player = getLocalPlayer(state);
-  const queueCount = player?.researchQueue.length ?? 0;
-  const activeLabel = player?.activeResearch ? state.catalog.tech[player.activeResearch.techId].displayName : "Idle";
+  const activeResearch = player?.activeResearch;
+  const activeLabel = activeResearch
+    ? `${state.catalog.tech[activeResearch.techId].displayName}${activeResearch.isPaused ? " (Paused)" : ""}`
+    : "Idle";
+  const currentMarkup = `
+    <div class="research-launcher-section">
+      <span class="research-launcher-section-label">Current</span>
+      <span class="research-launcher-meta">${activeLabel}</span>
+    </div>
+  `;
+  const queueMarkup = (player?.researchQueue?.length ?? 0) > 0
+    ? `
+      <div class="research-launcher-section research-launcher-queue">
+        <span class="research-launcher-section-label">Queued</span>
+        ${player.researchQueue.map((techId) => `<span class="research-launcher-queue-item">${state.catalog.tech[techId].displayName}</span>`).join("")}
+      </div>
+    `
+    : "";
+  const progressMarkup = activeResearch
+    ? `
+      <div class="research-launcher-progress-row">
+        <div class="progress-bar research-launcher-progress-bar" data-live-research-launcher-progress-bar>
+          <div class="progress-bar-fill"></div>
+        </div>
+        <span class="research-launcher-progress-label" data-live-research-launcher-progress-label></span>
+      </div>
+    `
+    : "";
 
   return `
     <button
@@ -670,8 +713,13 @@ function renderResearchLauncher(state) {
       data-action="toggle-research-modal"
       class="panel research-launcher ${state.showResearchModal ? "is-active" : ""}"
     >
-      <span class="research-launcher-title">Research</span>
-      <span class="research-launcher-meta">[Tab] ${activeLabel}${queueCount > 0 ? ` | Q${queueCount}` : ""}</span>
+      <span class="research-launcher-title-row">
+        <span class="research-launcher-title">Research</span>
+        <span class="research-launcher-hotkey">[Tab]</span>
+      </span>
+      ${currentMarkup}
+      ${queueMarkup}
+      ${progressMarkup}
     </button>
   `;
 }
@@ -802,4 +850,10 @@ function escapeAttribute(value) {
     .replaceAll("\"", "&quot;")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;");
+}
+
+function formatTechCenterRequirementLine(requiredTechCenterLevel) {
+  return requiredTechCenterLevel <= 0
+    ? "Tech Center Requirement: None"
+    : `Tech Center Requirement: Lv. ${requiredTechCenterLevel}`;
 }

@@ -544,7 +544,7 @@ function getAverageProductionSpendPerSecond(state, playerId, kind) {
     .map((definition) => {
       const producedUnitId = getProducedUnitId(definition);
       const unitDefinition = producedUnitId ? state.catalog.units[producedUnitId] : null;
-      return unitDefinition ? getUnitProductionCostPerSecond(unitDefinition) : 0;
+      return unitDefinition ? getUnitProductionCostPerSecond(definition, unitDefinition) : 0;
     })
     .filter((value) => value > 0);
 
@@ -580,7 +580,7 @@ function evaluateProductionBuildingInvestment(
   const unitDefinition = state.catalog.units[producedUnitId];
   const buildTime = Math.max(0.1, definition.buildTime);
   const constructionSpendPerSecond = buildCost / buildTime;
-  const productionSpendPerSecond = getUnitProductionCostPerSecond(unitDefinition);
+  const productionSpendPerSecond = getUnitProductionCostPerSecond(definition, unitDefinition);
   const analysis = evaluateBuildPointOpportunity(state, aiContext.playerId, buildingId, point);
   const expectedIncomeLift = estimateBuildPointIncomeLift(state, analysis);
   const currentNetIncome = snapshot.economy.netIncomePerSecond;

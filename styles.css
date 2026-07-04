@@ -942,9 +942,64 @@ input:focus {
   text-transform: uppercase;
 }
 
+.research-launcher-title-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+}
+
+.research-launcher-hotkey {
+  color: var(--muted);
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+}
+
 .research-launcher-meta {
   color: var(--muted);
   font-size: 0.74rem;
+}
+
+.research-launcher-section {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.08rem;
+  width: 100%;
+}
+
+.research-launcher-section-label {
+  color: #f3f6e9;
+  font-size: 0.66rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.research-launcher-queue {
+  margin-top: 0.1rem;
+}
+
+.research-launcher-queue-item {
+  color: var(--muted);
+  font-size: 0.7rem;
+}
+
+.research-launcher-progress-row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  width: 100%;
+  margin-top: 0.15rem;
+}
+
+.research-launcher-progress-bar {
+  flex: 1;
+  min-width: 0;
+}
+
+.research-launcher-progress-label {
+  color: #f3f6e9;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
 }
 
 .tech-branch-path {

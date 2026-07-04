@@ -1,4 +1,5 @@
-import { getBuildingCost, isBuildingUnlocked } from "../rules/catalogRules.js";
+import { getBuildingAvailability, getBuildingCost } from "../rules/catalogRules.js";
+import { traceAiEvent } from "../debug/aiTrace.js";
 import {
   getEnemyBase,
   getEntitySpatialIndex,
@@ -85,8 +86,13 @@ function updateConstructionBuilding(state, building, dt, remainingResources) {
 
 export function canPlaceBuildingAt(state, playerId, buildingId, point) {
   const buildingDefinition = state.catalog.buildings[buildingId];
-  if (!buildingDefinition || !isBuildingUnlocked(state, playerId, buildingId)) {
+  if (!buildingDefinition) {
     return { ok: false, reason: "Locked." };
+  }
+
+  const availability = getBuildingAvailability(state, playerId, buildingId);
+  if (!availability.unlocked) {
+    return { ok: false, reason: availability.reason };
   }
 
   if (
@@ -154,22 +160,47 @@ export function getSuggestedBuildPoint(state, playerId, buildingId, planningCont
   }
 
   const enemyBase = planningContext?.enemyBase ?? getEnemyBase(state, playerId);
-  const candidatePoints = getCandidateBuildPoints(state, playerId, buildingDefinition, ownedBuildings, anchor, enemyBase);
+  const candidateAnchors = getCandidateAnchors(state, playerId, buildingDefinition, ownedBuildings, anchor);
+  const candidatePoints = getCandidateBuildPoints(state, buildingDefinition, candidateAnchors, enemyBase);
 
   let bestPoint = null;
   let bestScore = Number.NEGATIVE_INFINITY;
+  let bestEvaluation = null;
+  const scoredCandidates = [];
+  const blockedCounts = {};
 
   for (const point of candidatePoints) {
-    if (!canPlaceBuildingAt(state, playerId, buildingId, point).ok) {
+    const placement = canPlaceBuildingAt(state, playerId, buildingId, point);
+    if (!placement.ok) {
+      blockedCounts[placement.reason] = (blockedCounts[placement.reason] ?? 0) + 1;
       continue;
     }
 
-    const score = scoreBuildPoint(state, playerId, buildingDefinition, point, anchor, enemyBase, ownedBuildings);
-    if (score > bestScore) {
-      bestScore = score;
+    const evaluation = evaluateBuildPointScore(
+      state,
+      playerId,
+      buildingDefinition,
+      point,
+      enemyBase,
+      ownedBuildings
+    );
+    scoredCandidates.push(evaluation);
+    if (evaluation.score > bestScore) {
+      bestScore = evaluation.score;
       bestPoint = point;
+      bestEvaluation = evaluation;
     }
   }
+
+  traceBuildPlacementDecision(
+    state,
+    playerId,
+    buildingDefinition,
+    candidateAnchors,
+    scoredCandidates,
+    blockedCounts,
+    bestEvaluation
+  );
 
   return bestPoint;
 }
@@ -189,8 +220,28 @@ export function evaluateBuildPointOpportunity(state, playerId, buildingId, point
   };
 }
 
-function getCandidateBuildPoints(state, playerId, buildingDefinition, ownedBuildings, fallbackAnchor, enemyBase) {
-  const anchors = ownedBuildings.length > 0 ? ownedBuildings : [fallbackAnchor];
+function getCandidateAnchors(state, playerId, buildingDefinition, ownedBuildings, fallbackAnchor) {
+  if (ownedBuildings.length === 0) {
+    return [fallbackAnchor];
+  }
+
+  if (buildingDefinition.kind !== "tech_structure") {
+    return ownedBuildings;
+  }
+
+  const anchors = ownedBuildings
+    .map((building) => ({
+      building,
+      safetyScore: scoreTechAnchorSafety(state, playerId, building)
+    }))
+    .sort((left, right) => right.safetyScore - left.safetyScore)
+    .slice(0, 4)
+    .map((entry) => entry.building);
+
+  return anchors.length > 0 ? anchors : [fallbackAnchor];
+}
+
+function getCandidateBuildPoints(state, buildingDefinition, anchors, enemyBase) {
   const distances = getCandidateDistances(buildingDefinition.kind);
   const angleCount = 16;
   const points = [];
@@ -208,7 +259,7 @@ function getCandidateBuildPoints(state, playerId, buildingDefinition, ownedBuild
       }
     }
 
-    if (enemyBase) {
+    if (enemyBase && buildingDefinition.kind !== "tech_structure") {
       const dx = enemyBase.x - anchor.x;
       const dy = enemyBase.y - anchor.y;
       const length = Math.hypot(dx, dy) || 1;
@@ -239,7 +290,7 @@ function getCandidateBuildPoints(state, playerId, buildingDefinition, ownedBuild
 
 function getCandidateDistances(kind) {
   if (kind === "tech_structure") {
-    return [70, 110, 160, 220];
+    return [70, 100, 130, 160];
   }
 
   if (kind === "advanced_production") {
@@ -249,14 +300,16 @@ function getCandidateDistances(kind) {
   return [75, 110, 160, 220, 300];
 }
 
-function scoreBuildPoint(state, playerId, buildingDefinition, point, fallbackAnchor, enemyBase, ownedBuildings = null) {
+function evaluateBuildPointScore(state, playerId, buildingDefinition, point, enemyBase, ownedBuildings = null) {
   const analysis = evaluateBuildPointOpportunity(state, playerId, buildingDefinition.id, point);
   const claim = analysis.claim;
   const risk = analysis.risk;
   const nearestOwnedDistance = getNearestOwnedBuildingDistance(state, playerId, point, ownedBuildings);
-  const base = getEntityById(state, getPlayerById(state, playerId).startingBaseId) ?? fallbackAnchor;
-  const distanceFromBase = Math.hypot(point.x - base.x, point.y - base.y);
+  const base = getEntityById(state, getPlayerById(state, playerId).startingBaseId);
+  const distanceFromBase = base ? Math.hypot(point.x - base.x, point.y - base.y) : 0;
   const enemyDistance = enemyBase ? Math.hypot(point.x - enemyBase.x, point.y - enemyBase.y) : 0;
+  const localSupport = getLocalOwnedBuildingSupport(point, ownedBuildings);
+  const enemyDistanceValue = enemyBase ? getEnemyDistanceValue(state, enemyDistance) : 0;
 
   let score = claim.claimableCells * 10 + claim.pressureScore * 4;
   score += risk.richClaimCount * 14;
@@ -275,7 +328,20 @@ function scoreBuildPoint(state, playerId, buildingDefinition, point, fallbackAnc
     score += enemyBase ? (state.map.width + state.map.height - enemyDistance) * 0.012 : 0;
     score -= distanceFromBase * 0.004;
   } else if (buildingDefinition.kind === "tech_structure") {
-    score -= distanceFromBase * 0.01;
+    score = 0;
+    score += enemyDistanceValue * 70;
+    score += risk.friendlyOwnedCells * 28;
+    score += risk.friendlyControl * 18;
+    score += localSupport * 18;
+    score -= nearestOwnedDistance * 0.03;
+    score -= risk.safeClaimableCells * 14;
+    score -= risk.richClaimCount * 20;
+    score -= risk.contestedControl * 180;
+    score -= risk.enemyOwnedCells * 120;
+    score -= risk.enemyUnitPressure * 280;
+    score -= risk.enemyBuildingPressure * 220;
+    score -= risk.frontlineExposure * 220;
+    score -= Math.max(0, risk.frontlineExposure - 0.35) * 420;
   }
 
   if (risk.imminentDanger) {
@@ -286,7 +352,22 @@ function scoreBuildPoint(state, playerId, buildingDefinition, point, fallbackAnc
     score -= 90;
   }
 
-  return score;
+  if (buildingDefinition.kind === "tech_structure" && risk.frontlineExposure > 0.55) {
+    score -= 220;
+  }
+
+  return {
+    point,
+    score,
+    claim,
+    risk,
+    metrics: {
+      enemyDistance,
+      enemyDistanceValue,
+      nearestOwnedDistance,
+      localSupport
+    }
+  };
 }
 
 function getBuildPointRiskMetrics(state, playerId, point, buildingRadius) {
@@ -327,6 +408,8 @@ function getBuildPointRiskMetrics(state, playerId, point, buildingRadius) {
   const territoryRadiusSquared = territoryRadius * territoryRadius;
   let contestedControl = 0;
   let enemyOwnedCells = 0;
+  let friendlyOwnedCells = 0;
+  let friendlyControl = 0;
   let safeClaimableCells = 0;
   let richClaimCount = 0;
 
@@ -338,8 +421,14 @@ function getBuildPointRiskMetrics(state, playerId, point, buildingRadius) {
       continue;
     }
 
+    const controlForPlayer = playerId === 1 ? cell.control : -cell.control;
+    if (cell.ownerId === playerId) {
+      friendlyOwnedCells += 1;
+      friendlyControl += Math.max(0, controlForPlayer);
+      continue;
+    }
+
     if (cell.ownerId !== playerId) {
-      const controlForPlayer = playerId === 1 ? cell.control : -cell.control;
       contestedControl += Math.max(0, controlForPlayer * -1);
       if (cell.ownerId === opponentPlayerId) {
         enemyOwnedCells += 1;
@@ -364,6 +453,8 @@ function getBuildPointRiskMetrics(state, playerId, point, buildingRadius) {
     enemyBuildingPressure,
     contestedControl,
     enemyOwnedCells,
+    friendlyOwnedCells,
+    friendlyControl,
     safeClaimableCells,
     richClaimCount,
     frontlineExposure,
@@ -396,6 +487,120 @@ function getNearestOwnedBuildingDistance(state, playerId, point, ownedBuildings 
   }
 
   return Number.isFinite(nearestDistance) ? nearestDistance : 0;
+}
+
+function getLocalOwnedBuildingSupport(point, ownedBuildings = null) {
+  if (!ownedBuildings || ownedBuildings.length === 0) {
+    return 0;
+  }
+
+  let support = 0;
+
+  for (const building of ownedBuildings) {
+    const distance = Math.hypot(point.x - building.x, point.y - building.y);
+    if (distance > 190) {
+      continue;
+    }
+
+    support += 1 - distance / 190;
+  }
+
+  return support;
+}
+
+function scoreTechAnchorSafety(state, playerId, building) {
+  const risk = getBuildPointRiskMetrics(state, playerId, building, building.radius ?? 20);
+  const enemyBase = getEnemyBase(state, playerId);
+  const enemyDistance = enemyBase ? Math.hypot(building.x - enemyBase.x, building.y - enemyBase.y) : 0;
+  const enemyDistanceValue = enemyBase ? getEnemyDistanceValue(state, enemyDistance) : 0;
+
+  return enemyDistanceValue * 55 +
+    risk.friendlyOwnedCells * 20 +
+    risk.friendlyControl * 12 -
+    risk.safeClaimableCells * 10 -
+    risk.contestedControl * 150 -
+    risk.enemyOwnedCells * 100 -
+    risk.enemyUnitPressure * 220 -
+    risk.enemyBuildingPressure * 180 -
+    risk.frontlineExposure * 180;
+}
+
+function getEnemyDistanceValue(state, enemyDistance) {
+  const maxDistance = Math.max(1, Math.hypot(state.map.width, state.map.height));
+  return clamp01(enemyDistance / maxDistance);
+}
+
+function traceBuildPlacementDecision(
+  state,
+  playerId,
+  buildingDefinition,
+  candidateAnchors,
+  scoredCandidates,
+  blockedCounts,
+  chosenCandidate
+) {
+  const topCandidates = [...scoredCandidates]
+    .sort((left, right) => right.score - left.score)
+    .slice(0, 5)
+    .map(summarizePlacementCandidate);
+  const signature = JSON.stringify({
+    buildingId: buildingDefinition.id,
+    chosenX: chosenCandidate ? Math.round(chosenCandidate.point.x) : null,
+    chosenY: chosenCandidate ? Math.round(chosenCandidate.point.y) : null,
+    chosenScore: round2(chosenCandidate?.score ?? -999),
+    topScore: round2(topCandidates[0]?.score ?? -999)
+  });
+
+  traceAiEvent(state, playerId, "placement", signature, {
+    buildingId: buildingDefinition.id,
+    buildingKind: buildingDefinition.kind,
+    chosenCandidate: chosenCandidate ? summarizePlacementCandidate(chosenCandidate) : null,
+    candidateAnchorCount: candidateAnchors.length,
+    candidateAnchors: candidateAnchors.slice(0, 5).map((anchor) => ({
+      id: anchor.id ?? null,
+      definitionId: anchor.definitionId ?? null,
+      kind: anchor.kind ?? null,
+      x: round2(anchor.x),
+      y: round2(anchor.y)
+    })),
+    validCandidateCount: scoredCandidates.length,
+    blockedCounts,
+    topCandidates
+  });
+}
+
+function summarizePlacementCandidate(candidate) {
+  return {
+    point: {
+      x: round2(candidate.point.x),
+      y: round2(candidate.point.y)
+    },
+    score: round2(candidate.score),
+    claimableCells: candidate.claim.claimableCells,
+    pressureScore: round2(candidate.claim.pressureScore),
+    enemyDistance: round2(candidate.metrics.enemyDistance),
+    enemyDistanceValue: round2(candidate.metrics.enemyDistanceValue),
+    nearestOwnedDistance: round2(candidate.metrics.nearestOwnedDistance),
+    localSupport: round2(candidate.metrics.localSupport),
+    enemyUnitPressure: round2(candidate.risk.enemyUnitPressure),
+    enemyBuildingPressure: round2(candidate.risk.enemyBuildingPressure),
+    contestedControl: round2(candidate.risk.contestedControl),
+    enemyOwnedCells: candidate.risk.enemyOwnedCells,
+    friendlyOwnedCells: candidate.risk.friendlyOwnedCells,
+    friendlyControl: round2(candidate.risk.friendlyControl),
+    safeClaimableCells: candidate.risk.safeClaimableCells,
+    richClaimCount: candidate.risk.richClaimCount,
+    frontlineExposure: round2(candidate.risk.frontlineExposure),
+    imminentDanger: candidate.risk.imminentDanger
+  };
+}
+
+function round2(value) {
+  if (!Number.isFinite(value)) {
+    return null;
+  }
+
+  return Math.round(value * 100) / 100;
 }
 
 function pushUniquePoint(points, seen, point) {

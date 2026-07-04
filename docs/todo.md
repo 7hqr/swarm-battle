@@ -59,7 +59,7 @@ Stabilize the core AI macro systems against the rebuilt tech tree, territory eco
 - [x] Improve AI-vs-AI panel clarity so macro intent, blockage, and territory behavior are easier to audit before deeper tuning
 - [ ] Fix macro stalling so AIs with strong income do not stop expanding, upgrading, or adding production after an early factory pair
 - [ ] Rework waypoint planning so AIs value side-lane and uncontested territory capture instead of defaulting too hard to centerline pressure
-- [ ] Tighten tech-center placement so key tech infrastructure is treated as a high-value structure instead of routine frontline production
+- [x] Tighten tech-center placement so key tech infrastructure is treated as a high-value structure instead of routine frontline production
 - [ ] Raise objective valuation so rich cells and global capture points are contested intentionally rather than claimed mostly by chance
 - [ ] Run a focused AI-vs-AI balance pass once the core macro, routing, and observation issues above are stable enough for efficient iteration
 
@@ -71,6 +71,7 @@ Stabilize the core AI macro systems against the rebuilt tech tree, territory eco
 - The AI-vs-AI panel clarity pass should stay scoped to debugging utility first; decide exact UI changes at implementation time instead of locking them in early
 - Base relocation no longer self-repels through waypoint sanitization, and stalled committed routes can now replan instead of staying permanently locked to a blocked waypoint
 - Macro debug tracing now supports focused AI economy audits so future spending deadlocks can be diagnosed from scoring and runway data instead of screenshots alone
+- Tech-center placement now filters out forward production anchors and heavily biases protected, base-adjacent building clusters over frontline territory gains
 
 ## Phase 4: UI Readability Cleanup
 

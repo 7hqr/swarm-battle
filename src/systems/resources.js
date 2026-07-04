@@ -120,7 +120,9 @@ function getProductionSpendingPerSecond(state, playerId) {
       continue;
     }
 
-    spendingPerSecond += getUnitProductionCostPerSecond(state.catalog.units[unitId]);
+    const buildingDefinition = state.catalog.buildings[building.definitionId];
+    const unitDefinition = state.catalog.units[unitId];
+    spendingPerSecond += getUnitProductionCostPerSecond(buildingDefinition, unitDefinition);
   }
 
   return spendingPerSecond;
@@ -138,7 +140,7 @@ function getBaseUpgradeSpendingPerSecond(state, playerId) {
 
 function getResearchSpendingPerSecond(state, playerId) {
   const player = getPlayerById(state, playerId);
-  if (!player?.activeResearch) {
+  if (!player?.activeResearch || player.activeResearch.isPaused) {
     return 0;
   }
 

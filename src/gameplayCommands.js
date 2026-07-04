@@ -1,11 +1,13 @@
 import {
+  cancelActiveResearch,
   appendWaypoint,
   removeQueuedResearch,
   clearWaypointChain,
   setProductionBuildingsEnabled,
   startBaseUpgrade,
   startTechUpgrade,
-  startResearch
+  startResearch,
+  toggleResearchPaused
 } from "./gameState.js";
 import { placeBuildingAt } from "./systems/construction.js";
 
@@ -14,6 +16,8 @@ const COMMAND_TYPES = {
   START_BASE_UPGRADE: "start_base_upgrade",
   START_TECH_UPGRADE: "start_tech_upgrade",
   START_RESEARCH: "start_research",
+  TOGGLE_RESEARCH_PAUSED: "toggle_research_paused",
+  CANCEL_ACTIVE_RESEARCH: "cancel_active_research",
   REMOVE_RESEARCH_QUEUE_ITEM: "remove_research_queue_item",
   SET_PRODUCTION_ENABLED: "set_production_enabled",
   CLEAR_WAYPOINT_CHAIN: "clear_waypoint_chain",
@@ -69,6 +73,12 @@ export function applyGameplayCommand(state, command) {
 
     case COMMAND_TYPES.START_RESEARCH:
       return startResearch(state, command.playerId, command.techId);
+
+    case COMMAND_TYPES.TOGGLE_RESEARCH_PAUSED:
+      return toggleResearchPaused(state, command.playerId);
+
+    case COMMAND_TYPES.CANCEL_ACTIVE_RESEARCH:
+      return cancelActiveResearch(state, command.playerId);
 
     case COMMAND_TYPES.REMOVE_RESEARCH_QUEUE_ITEM:
       return removeQueuedResearch(state, command.playerId, command.queueIndex);
@@ -127,6 +137,13 @@ function normalizeGameplayCommand(command) {
         type: command.type,
         playerId: command.playerId,
         techId: command.techId
+      };
+
+    case COMMAND_TYPES.TOGGLE_RESEARCH_PAUSED:
+    case COMMAND_TYPES.CANCEL_ACTIVE_RESEARCH:
+      return {
+        type: command.type,
+        playerId: command.playerId
       };
 
     case COMMAND_TYPES.REMOVE_RESEARCH_QUEUE_ITEM:

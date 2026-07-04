@@ -37,6 +37,7 @@ export function capturePresentationSnapshot(state) {
           velocityX: entity.velocityX ?? null,
           velocityY: entity.velocityY ?? null,
           facingAngle: entity.facingAngle ?? null,
+          turretFacingAngle: entity.turretFacingAngle ?? null,
           health: entity.health,
           constructionProgressSeconds: entity.constructionProgressSeconds ?? null,
           productionProgressSeconds: entity.productionProgressSeconds ?? null
@@ -67,17 +68,27 @@ export function getEntityDisplayPoint(state, entity, nowMs = performance.now()) 
 }
 
 export function getEntityDisplayAngle(state, entity, fallbackCurrentValue, nowMs = performance.now()) {
+  return getEntityDisplayAngleForField(state, entity, "facingAngle", fallbackCurrentValue, nowMs);
+}
+
+export function getEntityDisplayAngleForField(
+  state,
+  entity,
+  fieldName,
+  fallbackCurrentValue,
+  nowMs = performance.now()
+) {
   const previousSnapshot = state.presentation.previousSnapshot;
   const previousEntity = previousSnapshot?.entitiesById?.get(entity.id);
   if (
     !previousEntity ||
-    typeof previousEntity.facingAngle !== "number" ||
+    typeof previousEntity[fieldName] !== "number" ||
     typeof fallbackCurrentValue !== "number"
   ) {
     return fallbackCurrentValue;
   }
 
-  return lerpAngle(previousEntity.facingAngle, fallbackCurrentValue, getPresentationProgress(state, nowMs));
+  return lerpAngle(previousEntity[fieldName], fallbackCurrentValue, getPresentationProgress(state, nowMs));
 }
 
 export function getEntityDisplayValue(state, entity, fieldName, fallbackCurrentValue, nowMs = performance.now()) {
